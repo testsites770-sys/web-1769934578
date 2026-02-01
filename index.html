@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>צללי גות'אם: קומיקס באטמן</title>
+    <!-- Google Fonts for Rubik -->
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src='https://cdn.tailwindcss.com'></script>
+    
+    <!-- Custom Tailwind Configuration for Gotham Theme -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'gotham-black': '#121212',
+                        'gotham-dark-gray': '#333',
+                        'gotham-accent-blue': '#004d7a',
+                        'gotham-contrast': '#e0e0e0',
+                    },
+                    fontFamily: {
+                        sans: ['Rubik', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Custom CSS for specific elements (minimal, mostly scrollbar and arrow styles) -->
+    <style>
+        /* Specific element styles not easily achieved via utility classes */
+        .nav-arrow {
+            /* Full height target */
+            height: 100%; 
+            display: flex;
+            align-items: center;
+            opacity: 0.7;
+            transition: color 0.2s, background-color 0.2s, opacity 0.2s;
+        }
+
+        .nav-arrow:hover {
+            opacity: 1;
+        }
+
+        .nav-arrow:disabled {
+            color: theme('colors.gotham-dark-gray');
+            cursor: default;
+            opacity: 0.4;
+            background-color: transparent;
+        }
+
+        /* Hide scrollbar for thumbnail nav */
+        #thumbnail-nav::-webkit-scrollbar {
+            display: none;
+        }
+        #thumbnail-nav {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        
+        .thumbnail {
+            background-size: cover;
+            background-position: center;
+            border: 2px solid transparent;
+            transition: border 0.2s, transform 0.2s;
+            flex-shrink: 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .thumbnail:hover {
+            border-color: theme('colors.gotham-contrast');
+            transform: scale(1.05);
+        }
+
+        .thumbnail.active {
+            border-color: theme('colors.gotham-accent-blue');
+            transform: scale(1.1);
+        }
+
+        /* Mobile Adjustments for touch targets */
+        @media (max-width: 768px) {
+            .nav-arrow {
+                width: 15%; 
+            }
+        }
+    </style>
+</head>
+<body class="bg-gotham-black text-gotham-contrast min-h-screen flex flex-col overflow-hidden">
+
+    <!-- Header -->
+    <header id="main-header" class="text-center p-4 border-b border-gotham-dark-gray">
+        <h1 class="text-4xl font-bold text-gotham-accent-blue mb-1 sm:text-3xl">צללי גות'אם</h1>
+        <h2 class="text-base font-normal text-gotham-contrast">קומיקס באטמן: מערכה ראשונה</h2>
+    </header>
+
+    <!-- Main Comic Viewer -->
+    <main id="comic-viewer" class="flex-grow flex relative py-2 justify-center items-center overflow-hidden">
+        
+        <!-- Navigation Arrows (RTL: Prev is Right, Next is Left) -->
+        
+        <!-- Previous Button (Right Side) -->
+        <button id="prev-btn" class="nav-arrow absolute top-1/2 transform -translate-y-1/2 right-0 text-gotham-contrast text-5xl cursor-pointer p-4 z-10 bg-transparent hover:bg-black/30" aria-label="קומיקס קודם" disabled>
+            &#10095; <!-- Right arrow -->
+        </button>
+        
+        <div id="panel-container" class="max-w-[1000px] w-[95%] h-full relative overflow-hidden flex justify-center items-center">
+            <img id="current-panel" src="panels/panel-01.jpg" alt="פאנל 1 מתוך קומיקס באטמן" class="max-h-[calc(100vh-150px)] w-auto max-w-full object-contain block shadow-2xl transition-opacity duration-300 ease-in-out">
+            
+            <!-- Overlay for atmosphere -->
+            <div id="panel-overlay" class="absolute inset-0 pointer-events-none bg-[radial-gradient(circle,rgba(0,0,0,0)_60%,rgba(0,0,0,0.2)_100%)]"></div>
+            
+            <p id="panel-counter" class="absolute bottom-2 left-2 bg-black/60 p-1.5 rounded text-sm text-gray-400"></p>
+        </div>
+
+        <!-- Next Button (Left Side) -->
+        <button id="next-btn" class="nav-arrow absolute top-1/2 transform -translate-y-1/2 left-0 text-gotham-contrast text-5xl cursor-pointer p-4 z-10 bg-transparent hover:bg-black/30" aria-label="קומיקס הבא">
+            &#10094; <!-- Left arrow -->
+        </button>
+        
+    </main>
+
+    <!-- Thumbnail Navigation -->
+    <footer id="thumbnail-nav" class="flex justify-center items-center p-3 bg-gotham-black border-t border-gotham-dark-gray overflow-x-auto whitespace-nowrap">
+        <!-- Thumbnails generated by JS here -->
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const TOTAL_PANELS = 10;
+            let currentPanelIndex = 1; // Start at Panel 1
+
+            // DOM Elements
+            const panelImg = document.getElementById('current-panel');
+            const nextBtn = document.getElementById('next-btn');
+            const prevBtn = document.getElementById('prev-btn');
+            const thumbnailNav = document.getElementById('thumbnail-nav');
+            const panelCounter = document.getElementById('panel-counter');
+
+            /**
+             * Updates the comic viewer based on the current index.
+             * @param {number} index The 1-based index of the panel to display.
+             */
+            function updateViewer(index) {
+                if (index < 1 || index > TOTAL_PANELS) return;
+
+                currentPanelIndex = index;
+                
+                // 1. Update Image Source (Placeholder paths)
+                const panelNumber = String(currentPanelIndex).padStart(2, '0');
+                panelImg.src = `panels/panel-${panelNumber}.jpg`;
+                panelImg.alt = `פאנל ${currentPanelIndex} מתוך קומיקס באטמן`;
+
+                // 2. Update Panel Counter (Note: position is swapped to left in HTML/Tailwind)
+                panelCounter.textContent = `פאנל ${currentPanelIndex} מתוך ${TOTAL_PANELS}`;
+
+                // 3. Update Navigation Controls (RTL Logic: Next=Left, Previous=Right)
+                nextBtn.disabled = currentPanelIndex === TOTAL_PANELS;
+                prevBtn.disabled = currentPanelIndex === 1;
+
+                // 4. Update Thumbnails
+                document.querySelectorAll('.thumbnail').forEach(thumb => {
+                    thumb.classList.remove('active');
+                    if (parseInt(thumb.dataset.panel, 10) === currentPanelIndex) {
+                        thumb.classList.add('active');
+                        
+                        // Ensure active thumbnail is visible in scroll view
+                        thumb.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            inline: 'center' 
+                        });
+                    }
+                });
+            }
+
+            /**
+             * Initializes the thumbnail navigation bar.
+             */
+            function initializeThumbnails() {
+                for (let i = 1; i <= TOTAL_PANELS; i++) {
+                    const thumb = document.createElement('div');
+                    // Tailwind classes for size and margin
+                    thumb.className = 'thumbnail w-[60px] h-[40px] mx-1 sm:w-[45px] sm:h-[30px]'; 
+                    thumb.dataset.panel = i;
+                    
+                    // NOTE: In a real scenario, background images would be actual low-res thumbs
+                    const thumbNumber = String(i).padStart(2, '0');
+                    thumb.style.backgroundImage = `url('panels/thumb-${thumbNumber}.jpg')`; 
+
+                    // Panel number indicator (Tailwind classes for small text overlay)
+                    const span = document.createElement('span');
+                    span.className = 'absolute bottom-0 left-0 text-xs bg-black/70 px-1 text-gotham-contrast'; // Adjusted position for RTL/right side of thumbnail
+                    span.textContent = i;
+                    thumb.appendChild(span);
+
+                    thumb.addEventListener('click', () => {
+                        updateViewer(i);
+                    });
+                    thumbnailNav.appendChild(thumb);
+                }
+                // Set initial active state
+                updateViewer(currentPanelIndex);
+            }
+
+            // --- Event Listeners ---
+
+            // Next/Previous Button Handlers
+            nextBtn.addEventListener('click', () => {
+                if (currentPanelIndex < TOTAL_PANELS) {
+                    updateViewer(currentPanelIndex + 1);
+                }
+            });
+
+            prevBtn.addEventListener('click', () => {
+                if (currentPanelIndex > 1) {
+                    updateViewer(currentPanelIndex - 1);
+                }
+            });
+
+            // Keyboard Navigation (RTL: Left arrow is Next, Right arrow is Previous)
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') {
+                    // Next panel (moves viewer left)
+                    nextBtn.click(); 
+                } else if (e.key === 'ArrowRight') {
+                    // Previous panel (moves viewer right)
+                    prevBtn.click(); 
+                }
+            });
+
+            // Initialize the application
+            initializeThumbnails();
+        });
+    </script>
+</body>
+</html>
